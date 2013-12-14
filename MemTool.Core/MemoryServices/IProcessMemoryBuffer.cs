@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace MemTool.Core.MemoryServices
 {
-    public interface IProcessMemoryBuffer
+    public interface IProcessMemoryBuffer: IDisposable
     {
+        bool EndOfStream { get; }
         void Seek(IntPtr position);
         byte[] Peek(int length);
         byte[] Read(int length);
-        bool EndOfStream();
     }
 }
