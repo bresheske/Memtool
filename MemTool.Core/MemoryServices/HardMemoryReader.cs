@@ -14,6 +14,22 @@ namespace MemTool.Core.MemoryServices
     {
         List<byte> memory;
         private Process process;
+        private IntPtr openhandle;
+
+        [Flags]
+        enum ProcessAccessFlags : uint
+        {
+            All = 0x001F0FFF,
+            Terminate = 0x00000001,
+            CreateThread = 0x00000002,
+            VMOperation = 0x00000008,
+            VMRead = 0x00000010,
+            VMWrite = 0x00000020,
+            DupHandle = 0x00000040,
+            SetInformation = 0x00000200,
+            QueryInformation = 0x00000400,
+            Synchronize = 0x00100000
+        }
 
         public HardMemoryReader(Process p)
         {
@@ -24,20 +40,21 @@ namespace MemTool.Core.MemoryServices
 
         private void Init()
         {
+            openhandle = OpenProcess((int)ProcessAccessFlags.All, true, process.Id);
+            var addr = process.MainModule.BaseAddress;
             var buff = new byte[256];
-            var prochandle = OpenProcess(0x0010, false, process.Id);
-            var firstaddress = new IntPtr(0);
-            var lastaddress = new IntPtr((int)process.MainModule.BaseAddress + process.MainModule.ModuleMemorySize);
-            var addr = firstaddress;
             IntPtr numread;
 
-            while ((int)addr < (int)lastaddress)
+            while (ReadProcessMemory(openhandle, addr, buff, buff.Length, out numread))
             {
-                ReadProcessMemory(prochandle, addr, buff, buff.Length, out numread);
-                memory.AddRange(buff);
+                var data = buff;
+                if ((int)numread < buff.Length)
+                    data = buff.Take((int)numread).ToArray();
+                memory.AddRange(data);
                 addr = IntPtr.Add(addr, (int)numread);
             }
-
+            
+            File.WriteAllText("test-uni.txt", System.Text.Encoding.Unicode.GetString(memory.ToArray()));
             File.WriteAllLines("test.txt", memory.Select(x => ((int)x).ToString()));
         }
 
