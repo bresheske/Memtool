@@ -13,18 +13,63 @@ namespace MemTool.Console
     {
         static void Main(string[] args)
         {
+            var list = false;
+            var searchmem = false;
+
+            var searchproc = "";
+            var searchstring = "";
+            var searchprocid = "";
+            var showhelp = false;
+
             var opts = new OptionSet()
             {
-
+                {"l", "List Processes", x => list = true},
+                {"sp=", "Search for a Process with Name", x => {searchproc = x; list = true;}},
+                {"sm", "Search Memory", x => searchmem = true},
+                {"ss=", "Search for a String", x => {searchmem = true; searchstring = x;}},
+                {"pid=", "Process ID to Search Through", x => {searchmem = true; searchprocid = x;}},
+                {"h", "Show Help", x => showhelp = true}
             };
             opts.Parse(args);
 
+            // Validate
+            if (searchmem && 
+                (string.IsNullOrWhiteSpace(searchstring) || string.IsNullOrWhiteSpace(searchprocid) ))
+                showhelp = true;
 
+            if (!list && !searchmem)
+                showhelp = true;
+
+            // Help if needed.
+            if (showhelp)
+            {
+                opts.WriteOptionDescriptions(System.Console.Out);
+                return;
+            }
+
+            // Execute commands.
+            if (list)
+            {
+                var ps = string.IsNullOrWhiteSpace(searchproc)
+                    ? Process.GetProcesses()
+                    : Process.GetProcesses().Where(x => x.ProcessName.ToLower().Contains(searchproc.ToLower()));
+                foreach (var p in ps)
+                    System.Console.WriteLine("{0}:\t{1}", p.Id, p.ProcessName);
+                return;
+            }
+
+            if (searchmem)
+            {
+                var id = int.Parse(searchprocid);
+                var proc = Process.GetProcessById(id);
+                var handle = OpenProcess(0x0010, true, id);
+                BetterSearch(handle, searchstring);
+            }
         }
 
-        static void BetterSearch(IntPtr handle)
+        static void BetterSearch(IntPtr handle, string search)
         {
-            var str = System.Text.Encoding.Unicode.GetBytes("private data");
+            var str = System.Text.Encoding.Unicode.GetBytes(search);
             System.Console.WriteLine("Beginning Better Search... Searching for '{0}'", System.Text.Encoding.Unicode.GetString(str));
             System.Console.WriteLine();
 
@@ -36,23 +81,22 @@ namespace MemTool.Console
             addr = Fill(queue, handle, addr, buffsize, end);
             var numcorrect = 0;
             var correctaddress = IntPtr.Zero;
-            var count = 0;
+            var count = queue.Count;
             while (queue.Count > 0)
             {
                 if (queue.Count < buffsize / 2)
                 {
                     addr = Fill(queue, handle, addr, buffsize, end);
-                    count = 0;
+                    count = queue.Count;
                 }
 
                 // we have data, let's dequeue and loop through.
                 
                 var b = queue.Dequeue();
-                count++;
                 if (b == str[numcorrect])
                 {
                     if (numcorrect == 0)
-                        correctaddress = IntPtr.Add(addr, count * 2);
+                        correctaddress = IntPtr.Add(addr, count - queue.Count);
                     numcorrect++;
                 }
                 else
