@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NDesk.Options;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -12,34 +13,17 @@ namespace MemTool.Console
     {
         static void Main(string[] args)
         {
-            var sw = new Stopwatch();
+            var opts = new OptionSet()
+            {
 
-            sw.Start();
-            StandardSearch();
-            sw.Stop();
-            System.Console.WriteLine();
-            System.Console.WriteLine("{0:0.00} seconds to execute.", sw.ElapsedMilliseconds / 1000d);
+            };
+            opts.Parse(args);
 
-            sw.Restart();
-            BetterSearch();
-            sw.Stop();
-            System.Console.WriteLine();
-            System.Console.WriteLine("{0:0.00} seconds to execute.", sw.ElapsedMilliseconds / 1000d);
-            sw.Restart();
+
         }
 
-        static void BetterSearch()
+        static void BetterSearch(IntPtr handle)
         {
-            // Startup a test process.
-            var info = new ProcessStartInfo()
-            {
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                FileName = @"..\..\..\MemTool.Test.Console\bin\Debug\MemTool.Test.Console.exe"
-            };
-            var process = Process.Start(info);
-
-            var handle = OpenProcess(0x0010, true, process.Id);
             var str = System.Text.Encoding.Unicode.GetBytes("private data");
             System.Console.WriteLine("Beginning Better Search... Searching for '{0}'", System.Text.Encoding.Unicode.GetString(str));
             System.Console.WriteLine();
@@ -49,20 +33,26 @@ namespace MemTool.Console
             var queue = new Queue<byte>();
             var buffsize = 512;
 
-            Fill(queue, handle, addr, buffsize, end);
+            addr = Fill(queue, handle, addr, buffsize, end);
+            var numcorrect = 0;
+            var correctaddress = IntPtr.Zero;
+            var count = 0;
             while (queue.Count > 0)
             {
                 if (queue.Count < buffsize / 2)
-                    Fill(queue, handle, addr, buffsize, end);
+                {
+                    addr = Fill(queue, handle, addr, buffsize, end);
+                    count = 0;
+                }
 
                 // we have data, let's dequeue and loop through.
-                var numcorrect = 0;
-                var correctaddress = IntPtr.Zero;
+                
                 var b = queue.Dequeue();
+                count++;
                 if (b == str[numcorrect])
                 {
                     if (numcorrect == 0)
-                        correctaddress = addr;
+                        correctaddress = IntPtr.Add(addr, count * 2);
                     numcorrect++;
                 }
                 else
@@ -73,36 +63,42 @@ namespace MemTool.Console
                 if (numcorrect == str.Length)
                 {
                     // Found!
-
+                    numcorrect = 0;
+                    System.Console.WriteLine();
+                    System.Console.WriteLine("Found string at Address: {0:X}", (int)correctaddress);
+                    System.Console.WriteLine();
                 }
             }
         }
 
-        static void Fill(Queue<byte> data, IntPtr handle, IntPtr address, int buffsize, IntPtr endaddress)
+        static IntPtr Fill(Queue<byte> data, IntPtr handle, IntPtr address, int buffsize, IntPtr endaddress)
         {
             if ((int)address >= (int)endaddress)
-                return;
-            IntPtr numread;
+                return address;
+
+            var numread = IntPtr.Zero;
+            
             var buff = new byte[buffsize];
-            ReadProcessMemory(handle, address, buff, buff.Length, out numread);
-            for (int i = 0; i < (int)numread; i++)
+            var curaddress = address;
+            while ((int)numread == 0 && (int) curaddress < (int)endaddress)
             {
-                data.Enqueue(buff[i]);
+                var percent = (double)curaddress / (double)endaddress;
+                System.Console.Write("\r{0:P} :: {1:X}", percent, (int)curaddress);
+                ReadProcessMemory(handle, curaddress, buff, buff.Length, out numread);
+                for (int i = 0; i < (int)numread; i++)
+                {
+                    data.Enqueue(buff[i]);
+                }
+                curaddress = (int)numread > 0 
+                    ? IntPtr.Add(curaddress, (int)numread)
+                    : IntPtr.Add(curaddress, buffsize);
             }
+
+            return curaddress;
         }
 
-        static void StandardSearch()
+        static void StandardSearch(IntPtr handle)
         {
-            // Startup a test process.
-            var info = new ProcessStartInfo()
-            {
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                FileName = @"..\..\..\MemTool.Test.Console\bin\Debug\MemTool.Test.Console.exe"
-            };
-            var process = Process.Start(info);
-
-            var handle = OpenProcess(0x0010, true, process.Id);
             var str = System.Text.Encoding.Unicode.GetBytes("private data");
             System.Console.WriteLine("Beginning Standard Search... Searching for '{0}'", System.Text.Encoding.Unicode.GetString(str));
             System.Console.WriteLine();
@@ -137,7 +133,6 @@ namespace MemTool.Console
 
                 addr = IntPtr.Add(addr, (int)numread);
             }
-            process.Kill();
         }
 
 
