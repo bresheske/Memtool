@@ -29,7 +29,7 @@ namespace MemTool.Core.MemoryServices
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public string FormatData(byte[] data)
+        public string FormatData(byte[] data, Encoding enc)
         {
             var sb = new StringBuilder();
             // Displaying X only per row.
@@ -41,7 +41,7 @@ namespace MemTool.Core.MemoryServices
             // Add a pipe to seperate our characters.
             sb.Append("| ");
             // Add the rest of our text.
-            var text = System.Text.Encoding.Unicode.GetString(data);
+            var text = enc.GetString(data);
             if (text.Length > length)
                 text = text.Substring(0, length);
             sb.Append(text);
@@ -54,7 +54,7 @@ namespace MemTool.Core.MemoryServices
         /// <param name="data"></param>
         /// <param name="baseaddress"></param>
         /// <returns></returns>
-        public string FormatMultiLineData(byte[] data, IntPtr baseaddress)
+        public string FormatMultiLineData(byte[] data, IntPtr baseaddress, Encoding enc)
         {
             var numrows = Math.Ceiling((double)data.Length / (double)MAX_COLS_PER_ROW);
             var sb = new StringBuilder();
@@ -63,7 +63,7 @@ namespace MemTool.Core.MemoryServices
                 var startindex = i * MAX_COLS_PER_ROW;
                 var addr = IntPtr.Add(baseaddress, startindex);
                 var subdata = data.Skip(startindex).Take(MAX_COLS_PER_ROW).ToArray();
-                sb.AppendFormat("{0}:{1}", FormatAddress(addr), FormatData(subdata));
+                sb.AppendFormat("{0}:{1}", FormatAddress(addr), FormatData(subdata, enc));
                 sb.AppendLine();
             }
             return sb.ToString();

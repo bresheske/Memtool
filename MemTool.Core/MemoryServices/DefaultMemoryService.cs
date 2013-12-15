@@ -32,10 +32,10 @@ namespace MemTool.Core.MemoryServices
 
         public IntPtr OpenProcess(int id)
         {
-            return OpenProcess(0x0010 | 0x0020 | 0x0008, true, id);
+            return OpenProcess(0x001F0FFF, true, id);
         }
 
-        public IEnumerable<IntPtr> FindData(IntPtr handle, byte[] data)
+        public IEnumerable<IntPtr> FindData(IntPtr handle, byte[] data, Encoding enc)
         {
             var output = new List<IntPtr>();
             var addr = new IntPtr(0x00000000);
@@ -70,8 +70,7 @@ namespace MemTool.Core.MemoryServices
                     // Found!
                     var tempdata = ReadMemory(handle, correctaddress, data.Length * 2);
 
-                    Verbose.WriteLine();
-                    Verbose.WriteLine("{0}:{1}", formatter.FormatAddress(correctaddress), formatter.FormatData(tempdata));
+                    Verbose.WriteLine("{0}:{1}", formatter.FormatAddress(correctaddress), formatter.FormatData(tempdata, enc));
                     numcorrect = 0;
                     output.Add(correctaddress);
                 }
@@ -105,6 +104,11 @@ namespace MemTool.Core.MemoryServices
             return curaddress;
         }
 
+        public uint GetError()
+        {
+            return GetLastError();
+        }
+
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool ReadProcessMemory(
             IntPtr hProcess,
@@ -127,6 +131,9 @@ namespace MemTool.Core.MemoryServices
             int dwDesiredAccess, 
             bool bInheritHandle, 
             int dwProcessId);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetLastError();
 
     }
 }

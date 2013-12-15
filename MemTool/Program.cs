@@ -4,6 +4,7 @@ using Microsoft.Practices.Unity;
 using NDesk.Options;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -44,6 +45,7 @@ namespace MemTool.Console
             var address = "";
             var length = "";
             var writedata = "";
+            var enc = "";
 
             var opts = new OptionSet()
             {
@@ -58,6 +60,7 @@ namespace MemTool.Console
                 {"sp=", "Search for a Process with Name", x => searchproc = x},
                 {"ss=", "Search for a String", x => searchstring = x},
                 {"pid=", "Process ID", x =>  procid = x},
+                {"enc=", "Encoding. (uni, def)", x =>  enc = x},
 
                 {"string", "Write a String", x => writestring = true},
                 {"int", "Write an Int", x => writeint = true},
@@ -66,6 +69,8 @@ namespace MemTool.Console
 
                 {"h", "Show Help", x => showhelp = true}
             };
+            //var testargs = "-wm -data LOLZ -pid 1632 -addr 01116E9C".Split();
+            //opts.Parse(testargs);
             opts.Parse(args);
 
             if (!list && !searchmem && !readmem && !writemem)
@@ -81,6 +86,9 @@ namespace MemTool.Console
             // Execute commands.
             var service = DependencyResolver.Container.Resolve<IMemoryService>();
             var formatter = DependencyResolver.Container.Resolve<IMemoryFormatter>();
+            var encoding = System.Text.Encoding.Unicode;
+            if (enc == "def")
+                encoding = System.Text.Encoding.Default;
 
             // Just list out processes.
             if (list)
@@ -90,7 +98,6 @@ namespace MemTool.Console
                     : Process.GetProcesses().Where(x => x.ProcessName.ToLower().Contains(searchproc.ToLower()));
                 foreach (var p in ps)
                     System.Console.WriteLine("{0}:\t{1}", p.Id, p.ProcessName);
-                return;
             }
 
             // Searching Memory for data.
@@ -99,12 +106,12 @@ namespace MemTool.Console
                 var id = int.Parse(procid);
                 var proc = Process.GetProcessById(id);
                 var handle = service.OpenProcess(id);
-                var results = service.FindData(handle, System.Text.Encoding.Unicode.GetBytes(searchstring));
+                var results = service.FindData(handle, encoding.GetBytes(searchstring), encoding);
                 if (!verbose)
                     foreach (var r in results)
                     {
                         var data = service.ReadMemory(handle, r, searchstring.Length * 2);
-                        System.Console.WriteLine("{0}:{1}", formatter.FormatAddress(r), formatter.FormatData(data));
+                        System.Console.WriteLine("{0}:{1}", formatter.FormatAddress(r), formatter.FormatData(data, encoding));
                     }
             }
 
@@ -117,7 +124,7 @@ namespace MemTool.Console
                 var addr = new IntPtr(Convert.ToInt32(address, 16));
                 var len = int.Parse(length);
                 var data = service.ReadMemory(handle, addr, len);
-                System.Console.WriteLine(formatter.FormatMultiLineData(data, addr));
+                System.Console.WriteLine(formatter.FormatMultiLineData(data, addr, encoding));
             }
 
             // Writing Memory
@@ -133,13 +140,22 @@ namespace MemTool.Console
                 else if (writebyte)
                     data = System.Text.Encoding.ASCII.GetBytes(writedata);
                 else
-                    data = System.Text.Encoding.Unicode.GetBytes(writedata);
+                    data = encoding.GetBytes(writedata);
 
                 if (!service.WriteMemory(handle, addr, data))
+                {
+                    var error = Marshal.GetLastWin32Error();
                     System.Console.WriteLine("Memory Write Failed.");
+                    System.Console.WriteLine("Error: {0}:{1}", error, new Win32Exception(error).Message);
+                }
             }
         }
 
+        /// <summary>
+        /// Small function I found somewhere in SO.
+        /// </summary>
+        /// <param name="integer"></param>
+        /// <returns></returns>
         private static byte[] IntToBytes(int integer)
         {
             byte[] intBytes = BitConverter.GetBytes(integer);
