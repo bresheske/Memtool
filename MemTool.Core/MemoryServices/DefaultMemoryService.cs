@@ -89,8 +89,6 @@ namespace MemTool.Core.MemoryServices
             while ((int)numread == 0 && (int)curaddress < (int)endaddress)
             {
                 var percent = (double)curaddress / (double)endaddress;
-                //Verbose.Write("\r{0:P} : {1:X}", percent, (int)curaddress);
-
                 ReadProcessMemory(handle, curaddress, buff, buff.Length, out numread);
                 for (int i = 0; i < (int)numread; i++)
                 {
