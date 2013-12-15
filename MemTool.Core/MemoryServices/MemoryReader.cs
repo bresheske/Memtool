@@ -14,35 +14,41 @@ namespace MemTool.Core.MemoryServices
     {
         private IProcessMemoryBuffer buffer;
 
-        public MemoryReader(IntPtr process)
+        public MemoryReader(Process p)
         {
-            buffer = new ProcessMemoryBuffer(process);
+            buffer = new ProcessMemoryBuffer(p);
         }
 
-        public IntPtr Find(object o)
+        public IntPtr Find(byte[] needle)
         {
-            // grab our needle to find in our haystack.
-            var key = ObjectToByteArray(o);
-            // init our buffer. 2x the size of our key.  
-
-            throw new NotImplementedException();
+            // one at a time, checking the array.
+            var found = false;
+            var correctindex = 0;
+            var pointer = new IntPtr();
+            var b = buffer.Read(1)[0];
+            var c = 0;
+            while (!buffer.EndOfStream || found)
+            {
+                if (needle[correctindex] == b)
+                    correctindex++;
+                else
+                    correctindex = 0;
+                if (correctindex == needle.Length - 1)
+                {
+                    found = true;
+                    pointer = buffer.Position - buffer.Count;
+                }
+                var data = buffer.Read(1);
+                if (data != null)
+                    b = data[0];
+                c++;
+            }
+            return pointer;
         }
 
         public static IEnumerable<Process> GetProcesses()
         {
             return Process.GetProcesses();
-        }
-
-        protected byte[] ObjectToByteArray(Object obj)
-        {
-            if (obj == null)
-                return null;
-            var bf = new BinaryFormatter();
-            var ms = new MemoryStream();
-            bf.Serialize(ms, obj);
-            var output = ms.ToArray();
-            ms.Dispose();
-            return output;
         }
 
         public byte[] Read(int length)
@@ -83,6 +89,11 @@ namespace MemTool.Core.MemoryServices
         public string ReadString()
         {
             throw new NotImplementedException();
+        }
+
+        public void Dispose()
+        {
+            buffer.Dispose();
         }
     }
 }

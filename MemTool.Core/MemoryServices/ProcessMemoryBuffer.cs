@@ -13,7 +13,8 @@ namespace MemTool.Core.MemoryServices
         private const int BUFFER_SIZE = 256;
 
         private readonly IntPtr process;
-        private IntPtr position;
+        public IntPtr Position { get; private set; }
+        public int Count { get { return buffer.Count; } }
         private Queue<byte> buffer;
         private bool reading;
 
@@ -21,18 +22,19 @@ namespace MemTool.Core.MemoryServices
         {
             get
             {
-                return buffer == null || buffer.Count == 0;
+                return reading == false && buffer.Count == 0;
             }
         }
 
-        public ProcessMemoryBuffer(IntPtr process)
+        public ProcessMemoryBuffer(Process process)
         {
             reading = true;
-            this.process = process;
+            this.process = process.Handle;
             buffer = new Queue<byte>(BUFFER_SIZE);
-            position = Process.GetProcesses().First(x => x.Handle == process)
+            Position = process
                 .MainModule
                 .BaseAddress;
+            Fill();
         }
 
         public void Seek(IntPtr position)
@@ -47,7 +49,7 @@ namespace MemTool.Core.MemoryServices
 
         public byte[] Read(int length)
         {
-            if (reading && length > buffer.Count)
+            while (reading && length > buffer.Count)
                 Fill();
             if (buffer.Count == 0)
                 return null;
@@ -72,7 +74,7 @@ namespace MemTool.Core.MemoryServices
 
             var data = new byte[BUFFER_SIZE];
             IntPtr numread;
-            var success = ReadProcessMemory(process, position, data, BUFFER_SIZE, out numread);
+            var success = ReadProcessMemory(process, Position, data, BUFFER_SIZE, out numread);
             // if not succeed, or numread is less than buffer_size, then we have reached the end of our memory.
             if (!success | numread.ToInt32() < BUFFER_SIZE)
                 reading = false;
@@ -81,7 +83,7 @@ namespace MemTool.Core.MemoryServices
                 return;
             for (int i = 0; i < numread.ToInt32(); i++)
                 buffer.Enqueue(data[i]);
-            position += numread.ToInt32();
+            Position += numread.ToInt32();
         }
 
         public void Dispose()

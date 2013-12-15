@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace MemTool.Core.MemoryServices
 {
-    public interface IMemoryReader
+    public interface IMemoryReader : IDisposable
     {
         byte[] Read(int length);
         void Seek(IntPtr position);
         void Skip(int length);
         void Reset();
-        IntPtr Find(object o);
+        IntPtr Find(byte[] needle);
         int ReadInt32();
         bool ReadBool();
         char ReadChar();

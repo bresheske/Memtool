@@ -39,6 +39,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions\FindSubEnumerable.cs" />
+    <Compile Include="MemoryServices\HardMemoryReader.cs" />
     <Compile Include="MemoryServices\IProcessMemoryBuffer.cs" />
     <Compile Include="MemoryServices\MemoryReader.cs" />
     <Compile Include="MemoryServices\IMemoryReader.cs" />

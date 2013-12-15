@@ -11,11 +11,13 @@ namespace MemTool.Test.Console
     /// </summary>
     class Program
     {
-        public string PublicString = "public data";
-        private string PrivateString = "private data";
+        public static string PublicString = "public data";
+        private static string PrivateString = "private data";
 
         static void Main(string[] args)
         {
+            // Hold execution to hold memory.
+            var something = System.Console.In.ReadLine();
         }
     }
 }

@@ -26,7 +26,7 @@ namespace MemTool.Test
                 FileName = @"..\..\..\MemTool.Test.Console\bin\Debug\MemTool.Test.Console.exe"
             };
             process = Process.Start(info);
-            memoryreader = new MemoryReader(process.Handle);
+            memoryreader = new HardMemoryReader(process);
         }
 
         [TestFixtureTearDown]
@@ -39,10 +39,12 @@ namespace MemTool.Test
         public void TestFind()
         {
             // Act
-            var position = memoryreader.Find("public data");
+            var bytes = System.Text.Encoding.Unicode.GetBytes("public data");
+            var position = memoryreader.Find(bytes);
 
             // Assert the position is in memory.
             Assert.IsNotNull(position);
+            Assert.IsFalse(position.ToInt32() == 0);
         }
     }
 }
