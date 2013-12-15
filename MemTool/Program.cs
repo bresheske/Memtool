@@ -81,13 +81,11 @@ namespace MemTool.Console
             addr = Fill(queue, handle, addr, buffsize, end);
             var numcorrect = 0;
             var correctaddress = IntPtr.Zero;
-            var count = queue.Count;
             while (queue.Count > 0)
             {
                 if (queue.Count < buffsize / 2)
                 {
                     addr = Fill(queue, handle, addr, buffsize, end);
-                    count = queue.Count;
                 }
 
                 // we have data, let's dequeue and loop through.
@@ -96,7 +94,7 @@ namespace MemTool.Console
                 if (b == str[numcorrect])
                 {
                     if (numcorrect == 0)
-                        correctaddress = IntPtr.Add(addr, count - queue.Count);
+                        correctaddress = IntPtr.Subtract(addr, queue.Count + 1);
                     numcorrect++;
                 }
                 else
