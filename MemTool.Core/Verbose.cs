@@ -18,6 +18,13 @@ namespace MemTool.Core
             OutputStream.Write(s, args);
         }
 
+        public static void WriteLine()
+        {
+            if (OutputStream == null)
+                return;
+            OutputStream.WriteLine();
+        }
+
         public static void WriteLine(string s, params object[] args)
         {
             if (OutputStream == null)

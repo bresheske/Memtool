@@ -9,6 +9,13 @@ namespace MemTool.Core.MemoryServices
 {
     public class DefaultMemoryService : IMemoryService
     {
+        private readonly IMemoryFormatter formatter;
+
+        public DefaultMemoryService(IMemoryFormatter formatter)
+        {
+            this.formatter = formatter;
+        }
+
         public byte[] ReadMemory(IntPtr handle, IntPtr address, int size)
         {
             var data = new byte[size];
@@ -17,15 +24,15 @@ namespace MemTool.Core.MemoryServices
             return data;
         }
 
-        public void WriteMemory(IntPtr handle, IntPtr address, byte[] data)
+        public bool WriteMemory(IntPtr handle, IntPtr address, byte[] data)
         {
             UIntPtr numwritten;
-            WriteProcessMemory(handle, address, data, (uint)data.Length, out numwritten);
+            return WriteProcessMemory(handle, address, data, (uint)data.Length, out numwritten);
         }
 
         public IntPtr OpenProcess(int id)
         {
-            return OpenProcess(0x0010 | 0x0020, true, id);
+            return OpenProcess(0x0010 | 0x0020 | 0x0008, true, id);
         }
 
         public IEnumerable<IntPtr> FindData(IntPtr handle, byte[] data)
@@ -61,6 +68,10 @@ namespace MemTool.Core.MemoryServices
                 if (numcorrect == data.Length)
                 {
                     // Found!
+                    var tempdata = ReadMemory(handle, correctaddress, data.Length * 2);
+
+                    Verbose.WriteLine();
+                    Verbose.WriteLine("{0}:{1}", formatter.FormatAddress(correctaddress), formatter.FormatData(tempdata));
                     numcorrect = 0;
                     output.Add(correctaddress);
                 }
@@ -72,7 +83,6 @@ namespace MemTool.Core.MemoryServices
         {
             if ((int)address >= (int)endaddress)
                 return address;
-
             var numread = IntPtr.Zero;
 
             var buff = new byte[buffsize];
@@ -80,7 +90,7 @@ namespace MemTool.Core.MemoryServices
             while ((int)numread == 0 && (int)curaddress < (int)endaddress)
             {
                 var percent = (double)curaddress / (double)endaddress;
-
+                //Verbose.Write("\r{0:P} : {1:X}", percent, (int)curaddress);
 
                 ReadProcessMemory(handle, curaddress, buff, buff.Length, out numread);
                 for (int i = 0; i < (int)numread; i++)

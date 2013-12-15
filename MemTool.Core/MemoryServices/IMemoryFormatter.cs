@@ -10,5 +10,6 @@ namespace MemTool.Core.MemoryServices
     {
         string FormatAddress(IntPtr address);
         string FormatData(byte[] data);
+        string FormatMultiLineData(byte[] data, IntPtr baseaddress);
     }
 }

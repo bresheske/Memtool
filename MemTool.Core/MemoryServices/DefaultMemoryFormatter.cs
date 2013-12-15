@@ -8,8 +8,10 @@ namespace MemTool.Core.MemoryServices
 {
     public class DefaultMemoryFormatter : IMemoryFormatter
     {
+        private const int MAX_COLS_PER_ROW = 16;
+
         /// <summary>
-        /// Formats the pointer into 0x00000000 format.
+        /// Formats the pointer into 00000000 format.
         /// </summary>
         /// <param name="address"></param>
         /// <returns></returns>
@@ -18,7 +20,7 @@ namespace MemTool.Core.MemoryServices
             var hex = string.Format("{0:X}", (int)address);
             while (hex.Length < 8)
                 hex = "0" + hex;
-            hex = "0x" + hex;
+            //hex = "0x" + hex;
             return hex;
         }
 
@@ -29,10 +31,9 @@ namespace MemTool.Core.MemoryServices
         /// <returns></returns>
         public string FormatData(byte[] data)
         {
-            var maxcols = 14;
             var sb = new StringBuilder();
             // Displaying X only per row.
-            var length = Math.Min(data.Length, maxcols);
+            var length = Math.Min(data.Length, MAX_COLS_PER_ROW);
             for (int i = 0; i < length; i++)
             {
                 sb.AppendFormat("{0:X2} ", data[i]);
@@ -44,6 +45,27 @@ namespace MemTool.Core.MemoryServices
             if (text.Length > length)
                 text = text.Substring(0, length);
             sb.Append(text);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Same as FormatData, but with multiline support.
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="baseaddress"></param>
+        /// <returns></returns>
+        public string FormatMultiLineData(byte[] data, IntPtr baseaddress)
+        {
+            var numrows = Math.Ceiling((double)data.Length / (double)MAX_COLS_PER_ROW);
+            var sb = new StringBuilder();
+            for (int i = 0; i < numrows; i++)
+            {
+                var startindex = i * MAX_COLS_PER_ROW;
+                var addr = IntPtr.Add(baseaddress, startindex);
+                var subdata = data.Skip(startindex).Take(MAX_COLS_PER_ROW).ToArray();
+                sb.AppendFormat("{0}:{1}", FormatAddress(addr), FormatData(subdata));
+                sb.AppendLine();
+            }
             return sb.ToString();
         }
     }

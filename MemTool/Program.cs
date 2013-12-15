@@ -30,30 +30,45 @@ namespace MemTool.Console
             var list = false;
             var searchmem = false;
             var verbose = false;
+            var readmem = false;
+            var writemem = false;
+
+            var writestring = false;
+            var writeint = false;
+            var writebyte = false;
 
             var searchproc = "";
             var searchstring = "";
-            var searchprocid = "";
+            var procid = "";
             var showhelp = false;
+            var address = "";
+            var length = "";
+            var writedata = "";
 
             var opts = new OptionSet()
             {
                 {"l", "List Processes", x => list = true},
                 {"v", "Verbose On", x => {MemTool.Core.Verbose.OutputStream = System.Console.Out; verbose = true;}},
-                {"sp=", "Search for a Process with Name", x => {searchproc = x; list = true;}},
                 {"sm", "Search Memory", x => searchmem = true},
-                {"ss=", "Search for a String", x => {searchmem = true; searchstring = x;}},
-                {"pid=", "Process ID to Search Through", x => {searchmem = true; searchprocid = x;}},
+                {"rm", "Read Memory", x => readmem = true},
+                {"wm", "Write Memory", x => writemem = true},
+
+                {"addr=", "Address to Read/Write", x => address = x},
+                {"len=", "Length to Read", x => length = x},
+                {"sp=", "Search for a Process with Name", x => searchproc = x},
+                {"ss=", "Search for a String", x => searchstring = x},
+                {"pid=", "Process ID", x =>  procid = x},
+
+                {"string", "Write a String", x => writestring = true},
+                {"int", "Write an Int", x => writeint = true},
+                {"byte", "Write a Byte", x => writebyte = true},
+                {"data=", "Data to Write", x => writedata = x},
+
                 {"h", "Show Help", x => showhelp = true}
             };
             opts.Parse(args);
 
-            // Validate
-            if (searchmem && 
-                (string.IsNullOrWhiteSpace(searchstring) || string.IsNullOrWhiteSpace(searchprocid) ))
-                showhelp = true;
-
-            if (!list && !searchmem)
+            if (!list && !searchmem && !readmem && !writemem)
                 showhelp = true;
 
             // Help if needed.
@@ -64,6 +79,10 @@ namespace MemTool.Console
             }
 
             // Execute commands.
+            var service = DependencyResolver.Container.Resolve<IMemoryService>();
+            var formatter = DependencyResolver.Container.Resolve<IMemoryFormatter>();
+
+            // Just list out processes.
             if (list)
             {
                 var ps = string.IsNullOrWhiteSpace(searchproc)
@@ -74,11 +93,10 @@ namespace MemTool.Console
                 return;
             }
 
+            // Searching Memory for data.
             if (searchmem)
             {
-                var service = DependencyResolver.Container.Resolve<IMemoryService>();
-                var formatter = DependencyResolver.Container.Resolve<IMemoryFormatter>();
-                var id = int.Parse(searchprocid);
+                var id = int.Parse(procid);
                 var proc = Process.GetProcessById(id);
                 var handle = service.OpenProcess(id);
                 var results = service.FindData(handle, System.Text.Encoding.Unicode.GetBytes(searchstring));
@@ -89,6 +107,45 @@ namespace MemTool.Console
                         System.Console.WriteLine("{0}:{1}", formatter.FormatAddress(r), formatter.FormatData(data));
                     }
             }
+
+            // Reading Memory
+            if (readmem)
+            {
+                var id = int.Parse(procid);
+                var proc = Process.GetProcessById(id);
+                var handle = service.OpenProcess(id);
+                var addr = new IntPtr(Convert.ToInt32(address, 16));
+                var len = int.Parse(length);
+                var data = service.ReadMemory(handle, addr, len);
+                System.Console.WriteLine(formatter.FormatMultiLineData(data, addr));
+            }
+
+            // Writing Memory
+            if (writemem)
+            {
+                var id = int.Parse(procid);
+                var proc = Process.GetProcessById(id);
+                var handle = service.OpenProcess(id);
+                var addr = new IntPtr(Convert.ToInt32(address, 16));
+                byte[] data;
+                if (writeint)
+                    data = IntToBytes(int.Parse(writedata));
+                else if (writebyte)
+                    data = System.Text.Encoding.ASCII.GetBytes(writedata);
+                else
+                    data = System.Text.Encoding.Unicode.GetBytes(writedata);
+
+                if (!service.WriteMemory(handle, addr, data))
+                    System.Console.WriteLine("Memory Write Failed.");
+            }
+        }
+
+        private static byte[] IntToBytes(int integer)
+        {
+            byte[] intBytes = BitConverter.GetBytes(integer);
+            if (BitConverter.IsLittleEndian)
+                Array.Reverse(intBytes);
+            return intBytes;
         }
     }
 }
