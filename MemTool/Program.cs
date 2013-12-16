@@ -66,8 +66,6 @@ namespace MemTool.Console
 
                 {"h", "Show Help", x => showhelp = true}
             };
-            //var testargs = "-wm -data LOLZ -pid 1632 -addr 01116E9C".Split();
-            //opts.Parse(testargs);
             opts.Parse(args);
 
             if (!list && !searchmem && !readmem && !writemem)
