@@ -1,1 +1,0 @@
-<Playlist Version="1.0"><Add Test="MemTool.Test.MemoryBufferTests.TestBasicRead" /><Add Test="MemTool.Test.MemoryBufferTests.TestOneByOneRead" /></Playlist>
