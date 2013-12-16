@@ -62,7 +62,7 @@ namespace MemTool.Console
                 {"string", "Use a String for Write/Search", x => usestring = true},
                 {"int", "Use an Int for Write/Search", x => useint = true},
                 {"byte", "Use a Byte for Write/Search", x => usebyte = true},
-                {"data=", "Data to Write/Search", x => usedata = x},
+                {"d=", "Data to Write/Search", x => usedata = x},
 
                 {"h", "Show Help", x => showhelp = true}
             };
