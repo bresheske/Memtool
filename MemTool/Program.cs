@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -34,17 +35,15 @@ namespace MemTool.Console
             var readmem = false;
             var writemem = false;
 
-            var writestring = false;
-            var writeint = false;
-            var writebyte = false;
+            var usestring = false;
+            var useint = false;
+            var usebyte = false;
+            var usedata = "";
 
-            var searchproc = "";
-            var searchstring = "";
             var procid = "";
             var showhelp = false;
             var address = "";
             var length = "";
-            var writedata = "";
             var enc = "";
 
             var opts = new OptionSet()
@@ -57,15 +56,13 @@ namespace MemTool.Console
 
                 {"addr=", "Address to Read/Write", x => address = x},
                 {"len=", "Length to Read", x => length = x},
-                {"sp=", "Search for a Process with Name", x => searchproc = x},
-                {"ss=", "Search for a String", x => searchstring = x},
                 {"pid=", "Process ID", x =>  procid = x},
                 {"enc=", "Encoding. (uni, def)", x =>  enc = x},
 
-                {"string", "Write a String", x => writestring = true},
-                {"int", "Write an Int", x => writeint = true},
-                {"byte", "Write a Byte", x => writebyte = true},
-                {"data=", "Data to Write", x => writedata = x},
+                {"string", "Use a String for Write/Search", x => usestring = true},
+                {"int", "Use an Int for Write/Search", x => useint = true},
+                {"byte", "Use a Byte for Write/Search", x => usebyte = true},
+                {"data=", "Data to Write/Search", x => usedata = x},
 
                 {"h", "Show Help", x => showhelp = true}
             };
@@ -89,13 +86,20 @@ namespace MemTool.Console
             var encoding = System.Text.Encoding.Unicode;
             if (enc == "def")
                 encoding = System.Text.Encoding.Default;
+            byte[] data;
+            if (useint)
+                data = IntToBytes(int.Parse(usedata));
+            else if (usebyte)
+                data = ConvertHexStringToByteArray(usedata);
+            else
+                data = encoding.GetBytes(usedata);
 
             // Just list out processes.
             if (list)
             {
-                var ps = string.IsNullOrWhiteSpace(searchproc)
+                var ps = string.IsNullOrWhiteSpace(encoding.GetString(data))
                     ? Process.GetProcesses()
-                    : Process.GetProcesses().Where(x => x.ProcessName.ToLower().Contains(searchproc.ToLower()));
+                    : Process.GetProcesses().Where(x => x.ProcessName.ToLower().Contains(encoding.GetString(data).ToLower()));
                 foreach (var p in ps)
                     System.Console.WriteLine("{0}:\t{1}", p.Id, p.ProcessName);
             }
@@ -106,12 +110,12 @@ namespace MemTool.Console
                 var id = int.Parse(procid);
                 var proc = Process.GetProcessById(id);
                 var handle = service.OpenProcess(id);
-                var results = service.FindData(handle, encoding.GetBytes(searchstring), encoding);
+                var results = service.FindData(handle, data, encoding);
                 if (!verbose)
                     foreach (var r in results)
                     {
-                        var data = service.ReadMemory(handle, r, searchstring.Length * 2);
-                        System.Console.WriteLine("{0}:{1}", formatter.FormatAddress(r), formatter.FormatData(data, encoding));
+                        var readdata = service.ReadMemory(handle, r, data.Length * 2);
+                        System.Console.WriteLine("{0}:{1}", formatter.FormatAddress(r), formatter.FormatData(readdata, encoding));
                     }
             }
 
@@ -123,8 +127,8 @@ namespace MemTool.Console
                 var handle = service.OpenProcess(id);
                 var addr = new IntPtr(Convert.ToInt32(address, 16));
                 var len = int.Parse(length);
-                var data = service.ReadMemory(handle, addr, len);
-                System.Console.WriteLine(formatter.FormatMultiLineData(data, addr, encoding));
+                var readdata = service.ReadMemory(handle, addr, len);
+                System.Console.WriteLine(formatter.FormatMultiLineData(readdata, addr, encoding));
             }
 
             // Writing Memory
@@ -134,13 +138,6 @@ namespace MemTool.Console
                 var proc = Process.GetProcessById(id);
                 var handle = service.OpenProcess(id);
                 var addr = new IntPtr(Convert.ToInt32(address, 16));
-                byte[] data;
-                if (writeint)
-                    data = IntToBytes(int.Parse(writedata));
-                else if (writebyte)
-                    data = System.Text.Encoding.ASCII.GetBytes(writedata);
-                else
-                    data = encoding.GetBytes(writedata);
 
                 if (!service.WriteMemory(handle, addr, data))
                 {
@@ -152,7 +149,7 @@ namespace MemTool.Console
         }
 
         /// <summary>
-        /// Small function I found somewhere in SO.
+        /// Small function I found somewhere in StackOverflow.
         /// </summary>
         /// <param name="integer"></param>
         /// <returns></returns>
@@ -162,6 +159,28 @@ namespace MemTool.Console
             if (BitConverter.IsLittleEndian)
                 Array.Reverse(intBytes);
             return intBytes;
+        }
+
+        /// <summary>
+        /// http://stackoverflow.com/questions/321370/convert-hex-string-to-byte-array
+        /// </summary>
+        /// <param name="hexString"></param>
+        /// <returns></returns>
+        public static byte[] ConvertHexStringToByteArray(string hexString)
+        {
+            if (hexString.Length % 2 != 0)
+            {
+                throw new ArgumentException(String.Format(CultureInfo.InvariantCulture, "The binary key cannot have an odd number of digits: {0}", hexString));
+            }
+
+            byte[] HexAsBytes = new byte[hexString.Length / 2];
+            for (int index = 0; index < HexAsBytes.Length; index++)
+            {
+                string byteValue = hexString.Substring(index * 2, 2);
+                HexAsBytes[index] = byte.Parse(byteValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            }
+
+            return HexAsBytes;
         }
     }
 }
