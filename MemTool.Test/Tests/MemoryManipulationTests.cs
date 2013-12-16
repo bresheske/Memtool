@@ -69,5 +69,20 @@ namespace MemTool.Test.Tests
             Assert.IsNotEmpty(bytes);
             Assert.AreEqual("private data", Encoding.Unicode.GetString(bytes));
         }
+
+        [Test]
+        public void TestWriteMemory()
+        {
+            // Arrange
+            var handle = service.OpenProcess(testproc.Id);
+            var addr = service.FindData(handle, Encoding.Unicode.GetBytes("private data"), Encoding.Unicode);
+
+            // Act
+            service.WriteMemory(handle, addr.Last(), Encoding.Unicode.GetBytes("not private1"));
+            var read = service.ReadMemory(handle, addr.Last(), 24);
+
+            // Assert
+            Assert.AreEqual("not private1", Encoding.Unicode.GetString(read));
+        }
     }
 }
