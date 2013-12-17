@@ -1,10 +1,8 @@
 ﻿using MemTool.Core.MemoryServices;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using Microsoft.Practices.Unity;
+using System;
+using System.Diagnostics;
+using System.Text;
 
 namespace MemTool.Console.Input
 {

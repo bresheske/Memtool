@@ -1,11 +1,8 @@
 ﻿using MemTool.Core.MemoryServices;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Microsoft.Practices.Unity;
-using System.Diagnostics;
+using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace MemTool.Console.Input
