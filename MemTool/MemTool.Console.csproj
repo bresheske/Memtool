@@ -50,6 +50,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Input\BaseInput.cs" />
+    <Compile Include="Input\HelpInput.cs" />
+    <Compile Include="Input\ListInput.cs" />
+    <Compile Include="Input\ReadInput.cs" />
+    <Compile Include="Input\SearchInput.cs" />
+    <Compile Include="Input\WriteInput.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -63,9 +69,7 @@
       <Name>MemTool.Core</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Input\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
