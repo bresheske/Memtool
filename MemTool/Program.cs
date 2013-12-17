@@ -81,9 +81,9 @@ namespace MemTool.Console
             // Execute commands.
             var service = DependencyResolver.Container.Resolve<IMemoryService>();
             var formatter = DependencyResolver.Container.Resolve<IMemoryFormatter>();
-            var encoding = System.Text.Encoding.Unicode;
-            if (enc == "def")
-                encoding = System.Text.Encoding.Default;
+            var encoding = System.Text.Encoding.Default;
+            if (enc == "uni")
+                encoding = System.Text.Encoding.Unicode;
             byte[] data;
             if (useint)
                 data = IntToBytes(int.Parse(usedata));
