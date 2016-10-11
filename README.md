@@ -32,5 +32,6 @@ We can double-check our memory by calling the read memory method as well.
 ![](http://i.imgur.com/sJNNst6.png)
 
 And notice on the right we can see 'banana!' being displayed in the print-out.
+
 Have fun!
 
